@@ -1,0 +1,250 @@
+#include "esp_camera.h"
+#include <WiFi.h>
+#include <WiFiClientSecure.h>
+
+/* ================= WIFI ================= */
+const char* ssid = "yourssid";
+const char* password = "yourpassword";
+
+/* ================= EMAIL API ================= */
+const char* host = "www.circuitdigest.cloud";
+const int httpsPort = 443;
+const char* apiKey = "yourapikey";
+
+/* ================= PIR SENSOR ================= */
+#define PIR_PIN 13
+
+/* ================= LED PINS ================= */
+#define RED_LED_PIN 14
+#define FLASH_LED_PIN 4
+
+/* ================= ESP32-CAM AI THINKER ================= */
+#define PWDN_GPIO_NUM     32
+#define RESET_GPIO_NUM    -1
+#define XCLK_GPIO_NUM      0
+#define SIOD_GPIO_NUM     26
+#define SIOC_GPIO_NUM     27
+#define Y9_GPIO_NUM       35
+#define Y8_GPIO_NUM       34
+#define Y7_GPIO_NUM       39
+#define Y6_GPIO_NUM       36
+#define Y5_GPIO_NUM       21
+#define Y4_GPIO_NUM       19
+#define Y3_GPIO_NUM       18
+#define Y2_GPIO_NUM        5
+#define VSYNC_GPIO_NUM    25
+#define HREF_GPIO_NUM     23
+#define PCLK_GPIO_NUM     22
+
+/* ================= SETTINGS ================= */
+const unsigned long MOTION_COOLDOWN = 15000;   // 15 sec
+const unsigned long STABLE_TIME = 500;         // 0.5 sec stable detection
+const unsigned long LED_BLINK_INTERVAL = 1000;
+
+unsigned long lastMotionTime = 0;
+unsigned long lastLedToggle = 0;
+bool ledState = false;
+
+/* ================= SETUP ================= */
+void setup() {
+
+  Serial.begin(115200);
+  Serial.println("\nESP32-CAM Motion System Starting...");
+
+  pinMode(RED_LED_PIN, OUTPUT);
+  pinMode(FLASH_LED_PIN, OUTPUT);
+  digitalWrite(RED_LED_PIN, LOW);
+  digitalWrite(FLASH_LED_PIN, LOW);
+
+  pinMode(PIR_PIN, INPUT);   // IMPORTANT: No pulldown
+
+  Serial.println("Warming up PIR (60 sec)...");
+  delay(60000);
+  Serial.println("PIR Ready!");
+
+  /* ===== WIFI ===== */
+  WiFi.begin(ssid, password);
+  Serial.print("Connecting to WiFi");
+
+  while (WiFi.status() != WL_CONNECTED) {
+    delay(500);
+    Serial.print(".");
+  }
+
+  Serial.println("\nWiFi Connected!");
+
+  /* ===== CAMERA CONFIG ===== */
+  camera_config_t config;
+  config.ledc_channel = LEDC_CHANNEL_0;
+  config.ledc_timer   = LEDC_TIMER_0;
+  config.pin_d0 = Y2_GPIO_NUM;
+  config.pin_d1 = Y3_GPIO_NUM;
+  config.pin_d2 = Y4_GPIO_NUM;
+  config.pin_d3 = Y5_GPIO_NUM;
+  config.pin_d4 = Y6_GPIO_NUM;
+  config.pin_d5 = Y7_GPIO_NUM;
+  config.pin_d6 = Y8_GPIO_NUM;
+  config.pin_d7 = Y9_GPIO_NUM;
+  config.pin_xclk = XCLK_GPIO_NUM;
+  config.pin_pclk = PCLK_GPIO_NUM;
+  config.pin_vsync = VSYNC_GPIO_NUM;
+  config.pin_href = HREF_GPIO_NUM;
+  config.pin_sscb_sda = SIOD_GPIO_NUM;
+  config.pin_sscb_scl = SIOC_GPIO_NUM;
+  config.pin_pwdn = PWDN_GPIO_NUM;
+  config.pin_reset = RESET_GPIO_NUM;
+  config.xclk_freq_hz = 20000000;
+  config.pixel_format = PIXFORMAT_JPEG;
+  config.frame_size = FRAMESIZE_VGA;
+  config.jpeg_quality = 12;
+  config.fb_count = 1;
+
+  if (esp_camera_init(&config) != ESP_OK) {
+    Serial.println("Camera Init Failed!");
+    while (1);
+  }
+
+  Serial.println("System Ready - Monitoring...");
+}
+
+/* ================= LOOP ================= */
+void loop() {
+
+  unsigned long currentTime = millis();
+
+  static unsigned long pirHighStart = 0;
+  static bool pirWasHigh = false;
+
+  int pirState = digitalRead(PIR_PIN);
+
+  // DEBUG: show PIR state
+  Serial.println(pirState);
+
+  if (pirState == HIGH) {
+
+    if (!pirWasHigh) {
+      pirHighStart = currentTime;
+      pirWasHigh = true;
+    }
+
+    if (currentTime - pirHighStart >= STABLE_TIME) {
+
+      if (currentTime - lastMotionTime > MOTION_COOLDOWN) {
+
+        lastMotionTime = currentTime;
+        captureAndSendImage();
+      }
+    }
+
+  } else {
+    pirWasHigh = false;
+  }
+
+  /* ===== LED STATUS ===== */
+  if (currentTime - lastMotionTime > MOTION_COOLDOWN) {
+
+    if (currentTime - lastLedToggle > LED_BLINK_INTERVAL) {
+      ledState = !ledState;
+      digitalWrite(RED_LED_PIN, ledState);
+      lastLedToggle = currentTime;
+    }
+
+  } else {
+    digitalWrite(RED_LED_PIN, HIGH);
+  }
+
+  delay(200);
+}
+
+/* ================= CAPTURE ================= */
+void captureAndSendImage() {
+
+  Serial.println("Motion Confirmed - Capturing Image");
+
+  digitalWrite(FLASH_LED_PIN, HIGH);
+  delay(150);
+
+  camera_fb_t* fb = esp_camera_fb_get();
+  digitalWrite(FLASH_LED_PIN, LOW);
+
+  if (!fb) {
+    Serial.println("Capture Failed!");
+    return;
+  }
+
+  sendEmailWithImage(fb);
+  esp_camera_fb_return(fb);
+
+  Serial.println("Capture Done\n");
+}
+
+/* ================= EMAIL ================= */
+bool sendEmailWithImage(camera_fb_t* fb) {
+
+  WiFiClientSecure client;
+  client.setInsecure();
+
+  Serial.println("Connecting to server...");
+
+  if (!client.connect(host, httpsPort)) {
+    Serial.println("❌ Server Connection Failed!");
+    return false;
+  }
+
+  Serial.println("Connected to server");
+
+  String boundary = "----ESP32CAMBoundary";
+
+  String bodyStart =
+    "--" + boundary + "\r\n"
+    "Content-Disposition: form-data; name=\"to_email\"\r\n\r\n"
+    "vedha3vedha@gmail.com\r\n"
+    "--" + boundary + "\r\n"
+    "Content-Disposition: form-data; name=\"template_id\"\r\n\r\n"
+    "1002\r\n"
+    "--" + boundary + "\r\n"
+    "Content-Disposition: form-data; name=\"variables\"\r\n\r\n"
+    "{\"title\":\"Motion Alert\",\"description\":\"Motion detected - Image captured\"}\r\n"
+    "--" + boundary + "\r\n"
+    "Content-Disposition: form-data; name=\"image\"; filename=\"motion.jpg\"\r\n"
+    "Content-Type: image/jpeg\r\n\r\n";
+
+  String bodyEnd = "\r\n--" + boundary + "--\r\n";
+
+  int contentLength = bodyStart.length() + fb->len + bodyEnd.length();
+
+  client.println("POST /api/v1/email/send-with-image HTTP/1.1");
+  client.println("Host: " + String(host));
+  client.println("Authorization: Bearer " + String(apiKey));
+  client.println("Content-Type: multipart/form-data; boundary=" + boundary);
+  client.print("Content-Length: ");
+  client.println(contentLength);
+  client.println();
+
+  client.print(bodyStart);
+  client.write(fb->buf, fb->len);
+  client.print(bodyEnd);
+
+  Serial.println("Request sent. Waiting for response...");
+
+  // 🔥 Read server response
+  unsigned long timeout = millis();
+  while (client.available() == 0) {
+    if (millis() - timeout > 5000) {
+      Serial.println("❌ Server Timeout!");
+      client.stop();
+      return false;
+    }
+  }
+
+  // Print response
+  while (client.available()) {
+    String line = client.readStringUntil('\r');
+    Serial.print(line);
+  }
+
+  client.stop();
+  Serial.println("\nConnection closed");
+
+  return true;
+}
