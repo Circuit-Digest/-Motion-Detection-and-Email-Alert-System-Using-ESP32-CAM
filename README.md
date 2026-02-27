@@ -1,63 +1,82 @@
-📷 Motion Detection and Email Alert System Using ESP32-CAM
-🚀 Project Overview
+# 📷 Motion Detection and Email Alert System Using ESP32-CAM
 
-This project demonstrates a smart motion detection and email alert system using the ESP32-CAM and a PIR sensor.
+In recent years, smart security systems have become essential for homes and workplaces. Traditional systems require continuous monitoring, but with IoT and embedded systems, we can automate surveillance.
 
-When motion is detected, the ESP32-CAM captures an image and sends it to a registered email address through CircuitDigest Cloud. The system works automatically without continuous manual monitoring and provides a low-cost IoT-based security solution.
+This project demonstrates a **motion-activated security camera using ESP32-CAM and PIR sensor**. When motion is detected, the ESP32-CAM captures an image and sends it to a registered email address using the CircuitDigest Cloud platform.
 
-🎯 Features
+---
 
-Motion detection using PIR sensor
+## 🚀 Project Overview
 
-Automatic image capture on motion
+- Detects motion using PIR sensor
+- Captures image instantly
+- Sends captured image via Email
+- Uses secure HTTPS communication
+- Wi-Fi enabled IoT-based security system
 
-Email alert with captured image
+---
 
-Secure HTTPS communication
+## 🧰 Components Required
 
-LED status indication
+| S.No | Component | Purpose |
+|------|-----------|----------|
+| 1 | ESP32-CAM | Main controller & image capture |
+| 2 | PIR Sensor | Motion detection |
+| 3 | Breadboard | Hardware connections |
+| 4 | Jumper Wires | Interfacing |
+| 5 | Red LED | Status indication |
+| 6 | 220Ω Resistor | LED protection |
 
-Cooldown timer to prevent repeated triggers
+> **Note:** If using standard ESP32-CAM (without USB), you need a USB-to-Serial converter for programming.
 
-Compact and cost-effective surveillance system
+---
 
-🛠️ Components Required
-S.No	Component	Quantity	Purpose
-1	ESP32-CAM	1	Main controller and image capture
-2	PIR Sensor	1	Motion detection
-3	Red LED	1	Status indication
-4	220 Ohm Resistor	1	LED protection
-5	Breadboard	1	Circuit setup
-6	Jumper Wires	As required	Electrical connections
-7	USB-to-Serial Converter (if required)	1	Programming ESP32-CAM
-⚙️ Working Principle
+## 🔌 Circuit Connections
 
-The PIR sensor continuously monitors the surroundings.
+- PIR OUT → GPIO13
+- PIR VCC → 5V
+- PIR GND → GND
+- Red LED → GPIO14 (with 220Ω resistor)
+- Flash LED → GPIO4 (Onboard)
 
-When motion is detected, it sends a HIGH signal to GPIO13.
+---
 
-The ESP32-CAM activates the flash LED and captures an image.
+## ⚙️ Working Principle
 
-The image is temporarily stored in the frame buffer.
+1. ESP32-CAM connects to Wi-Fi
+2. PIR sensor continuously monitors motion
+3. When motion detected:
+   - Flash LED turns ON
+   - Image is captured
+   - Image stored in frame buffer
+   - HTTPS POST request sent to cloud
+4. Cloud server processes request
+5. Email with image attachment is delivered
 
-The ESP32-CAM connects to Wi-Fi.
+System LED indications:
 
-A secure HTTPS POST request is sent to CircuitDigest Cloud.
+- Fast blink → Initialization
+- Slow blink → Monitoring mode
+- Flash ON → Capturing image
 
-The server processes the request and sends the captured image to the registered email address.
+---
 
-🔌 Pin Configuration
+## 💻 Code Snippet
+
+```cpp
 #define PIR_PIN 13
 #define RED_LED_PIN 14
 #define FLASH_LED_PIN 4
-🌐 Wi-Fi and Server Configuration
+
 const char* ssid = "yourssidname";
 const char* password = "yourpassword";
 
 const char* host = "www.circuitdigest.cloud";
 const int httpsPort = 443;
 const char* apiKey = "yourapikey";
-📸 Camera Configuration
+
+Camera configuration:
+
 camera_config_t config;
 config.pixel_format = PIXFORMAT_JPEG;
 config.frame_size = FRAMESIZE_VGA;
@@ -67,108 +86,102 @@ if (esp_camera_init(&config) != ESP_OK) {
   Serial.println("Camera Init Failed!");
   while (1);
 }
-🔁 Motion Detection Logic
-int pirState = digitalRead(PIR_PIN);
 
+Motion detection logic:
+
+int pirState = digitalRead(PIR_PIN);
 if (pirState == HIGH) {
-    if (currentTime - lastMotionTime > MOTION_COOLDOWN) {
-        lastMotionTime = currentTime;
-        captureAndSendImage();
-    }
+    captureAndSendImage();
 }
-📡 Sending Image via HTTPS
+
+Secure email transmission:
+
 WiFiClientSecure client;
 client.setInsecure();
 client.connect(host, httpsPort);
-
 client.println("POST /api/v1/email/send-with-image HTTP/1.1");
 client.println("Authorization: Bearer " + String(apiKey));
 client.write(fb->buf, fb->len);
-📡 Applications
+🌍 Applications
 
-Home Security Monitoring
+🏠 Home Security Monitoring
 
-Office Surveillance
+🏢 Office Surveillance
 
-Warehouse Protection
+📦 Warehouse Protection
 
-Remote Area Monitoring
+🌾 Remote Area Monitoring
 
-IoT-Based Smart Alert Systems
+🌐 IoT Smart Alert Systems
 
-🔧 Troubleshooting
+🛠 Troubleshooting
 ESP32-CAM Not Connecting to Wi-Fi
 
-Check SSID and password
+Check SSID & password
 
-Ensure stable Wi-Fi signal
+Ensure stable 5V power supply
 
-Provide stable 5V power supply
+Keep router within range
 
 Camera Initialization Failed
 
-Select AI Thinker ESP32-CAM in Arduino IDE
+Select correct board (AI Thinker ESP32-CAM)
 
-Verify camera pin configuration
+Check camera pin configuration
 
-Ensure sufficient current supply
+Provide stable power
 
 Image Not Captured
 
-Check camera module connections
+Reduce frame size
 
-Reduce frame size if memory issue occurs
+Check memory usage
 
-Monitor Serial output for debugging
+Verify camera module
 
 Email Not Sent
 
 Verify API key
 
-Ensure correct payload formatting
+Check internet connection
 
-Check internet connectivity
+Confirm payload format
 
 False Motion Detection
 
 Adjust PIR sensitivity
 
-Avoid placing near heat sources
+Avoid direct sunlight/heat sources
 
-Increase cooldown time in code
-
-🔮 Future Enhancements
-
-Add microSD card image storage
-
-Add buzzer alarm system
-
-Real-time video streaming
-
-Mobile app integration
-
-Multi-camera support
-
-📚 Learning Outcomes
-
-After completing this project, you will understand:
-
-ESP32-CAM configuration
-
-PIR sensor working principle
-
-HTTPS communication using WiFiClientSecure
-
-Sending image data using HTTP POST
-
-IoT cloud integration
-
-Motion-based automation systems
+Increase cooldown timer
 
 📌 Conclusion
 
-This ESP32-CAM motion detection and email alert system provides a simple and efficient smart security solution. By integrating PIR sensing, image capture, Wi-Fi communication, and cloud services, the system enables real-time remote monitoring without requiring complex infrastructure.
+This project provides a cost-effective smart surveillance solution using ESP32-CAM. It combines:
 
-It is suitable for home, office, and industrial applications.
+Motion sensing
 
-Author: Vedhathiri K.
+Real-time image capture
+
+Secure Wi-Fi communication
+
+Cloud-based email alerts
+
+It demonstrates how embedded systems and IoT technology can build practical real-time security applications.
+
+❓ Frequently Asked Questions
+
+1. Why does ESP32-CAM fail to capture images?
+Usually due to insufficient power supply or incorrect configuration.
+
+2. Why is email not being sent?
+Check Wi-Fi, API key, and server endpoint configuration.
+
+3. PIR detection range?
+Typically 5–7 meters depending on model and environment.
+
+4. Can images be stored locally?
+Yes, using microSD card integration.
+
+5. Is this suitable for real security systems?
+For basic monitoring yes. Professional systems require additional security features.
