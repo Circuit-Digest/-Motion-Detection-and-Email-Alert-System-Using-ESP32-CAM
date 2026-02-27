@@ -61,47 +61,6 @@ System LED indications:
 
 ---
 
-## 💻 Code Snippet
-
-```cpp
-#define PIR_PIN 13
-#define RED_LED_PIN 14
-#define FLASH_LED_PIN 4
-
-const char* ssid = "yourssidname";
-const char* password = "yourpassword";
-
-const char* host = "www.circuitdigest.cloud";
-const int httpsPort = 443;
-const char* apiKey = "yourapikey";
-
-Camera configuration:
-
-camera_config_t config;
-config.pixel_format = PIXFORMAT_JPEG;
-config.frame_size = FRAMESIZE_VGA;
-config.jpeg_quality = 12;
-
-if (esp_camera_init(&config) != ESP_OK) {
-  Serial.println("Camera Init Failed!");
-  while (1);
-}
-
-Motion detection logic:
-
-int pirState = digitalRead(PIR_PIN);
-if (pirState == HIGH) {
-    captureAndSendImage();
-}
-
-Secure email transmission:
-
-WiFiClientSecure client;
-client.setInsecure();
-client.connect(host, httpsPort);
-client.println("POST /api/v1/email/send-with-image HTTP/1.1");
-client.println("Authorization: Bearer " + String(apiKey));
-client.write(fb->buf, fb->len);
 🌍 Applications
 
 🏠 Home Security Monitoring
@@ -113,47 +72,7 @@ client.write(fb->buf, fb->len);
 🌾 Remote Area Monitoring
 
 🌐 IoT Smart Alert Systems
-
-🛠 Troubleshooting
-ESP32-CAM Not Connecting to Wi-Fi
-
-Check SSID & password
-
-Ensure stable 5V power supply
-
-Keep router within range
-
-Camera Initialization Failed
-
-Select correct board (AI Thinker ESP32-CAM)
-
-Check camera pin configuration
-
-Provide stable power
-
-Image Not Captured
-
-Reduce frame size
-
-Check memory usage
-
-Verify camera module
-
-Email Not Sent
-
-Verify API key
-
-Check internet connection
-
-Confirm payload format
-
-False Motion Detection
-
-Adjust PIR sensitivity
-
-Avoid direct sunlight/heat sources
-
-Increase cooldown timer
+---
 
 📌 Conclusion
 
@@ -168,6 +87,7 @@ Secure Wi-Fi communication
 Cloud-based email alerts
 
 It demonstrates how embedded systems and IoT technology can build practical real-time security applications.
+---
 
 ❓ Frequently Asked Questions
 
@@ -185,3 +105,5 @@ Yes, using microSD card integration.
 
 5. Is this suitable for real security systems?
 For basic monitoring yes. Professional systems require additional security features.
+
+
