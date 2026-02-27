@@ -96,3 +96,7 @@ Yes, using microSD card integration.
 
 5. Is this suitable for real security systems?
 For basic monitoring yes. Professional systems require additional security features.
+
+Author:
+
+Vedhathiri. K
