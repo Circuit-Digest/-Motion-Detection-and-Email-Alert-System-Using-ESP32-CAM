@@ -71,22 +71,13 @@ System LED indications:
 
 🌾 Remote Area Monitoring
 
-🌐 IoT Smart Alert Systems
 ---
 
 📌 Conclusion
 
 This project provides a cost-effective smart surveillance solution using ESP32-CAM. It combines:
+Motion sensing,Real-time image capture,Secure Wi-Fi communication and Cloud-based email alerts.
 
-Motion sensing
-
-Real-time image capture
-
-Secure Wi-Fi communication
-
-Cloud-based email alerts
-
-It demonstrates how embedded systems and IoT technology can build practical real-time security applications.
 ---
 
 ❓ Frequently Asked Questions
@@ -105,5 +96,3 @@ Yes, using microSD card integration.
 
 5. Is this suitable for real security systems?
 For basic monitoring yes. Professional systems require additional security features.
-
-
